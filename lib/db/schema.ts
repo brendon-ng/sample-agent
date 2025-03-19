@@ -5,6 +5,7 @@ import {
   blob,
   foreignKey,
   primaryKey,
+  real,
 } from 'drizzle-orm/sqlite-core';
 import type { InferSelectModel } from 'drizzle-orm';
 
@@ -99,3 +100,30 @@ export const suggestion = sqliteTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const invoice = sqliteTable('Invoice', {
+  id: text('id').primaryKey().notNull(),
+  userId: text('userId').notNull(),
+  customerName: text('customerName').notNull(),
+  vendorName: text('vendorName').notNull(),
+  invoiceNumber: text('invoiceNumber').notNull(),
+  invoiceDate: integer('invoiceDate', { mode: 'timestamp' }).notNull(),
+  dueDate: integer('dueDate', { mode: 'timestamp' }).notNull(),
+  amount: real('amount').notNull(),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+});
+
+export type Invoice = InferSelectModel<typeof invoice>;
+
+export const lineItem = sqliteTable('LineItem', {
+  id: text('id').primaryKey().notNull(),
+  invoiceId: text('invoiceId')
+    .notNull()
+    .references(() => invoice.id),
+  itemName: text('itemName').notNull(),
+  itemQuantity: integer('itemQuantity').notNull(),
+  itemPrice: real('itemPrice').notNull(),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+});
+
+export type LineItem = InferSelectModel<typeof lineItem>;

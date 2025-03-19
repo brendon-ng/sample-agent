@@ -24,11 +24,13 @@ export function Chat({
   initialMessages,
   selectedChatModel,
   selectedVisibilityType,
+  isReadonly = false,
 }: {
   id: string;
   initialMessages: Array<Message>;
   selectedChatModel: string;
   selectedVisibilityType: VisibilityType;
+  isReadonly?: boolean;
 }) {
   const { mutate } = useSWRConfig();
 
@@ -72,7 +74,7 @@ export function Chat({
           chatId={id}
           selectedModelId={selectedChatModel}
           selectedVisibilityType={selectedVisibilityType}
-          isReadonly={false}
+          isReadonly={isReadonly}
         />
 
         <PanelGroup direction="horizontal" className="flex-1">
@@ -84,7 +86,7 @@ export function Chat({
               messages={messages}
               setMessages={setMessages}
               reload={reload}
-              isReadonly={false}
+              isReadonly={isReadonly}
               isBlockVisible={isBlockVisible}
             />
 
@@ -136,7 +138,7 @@ export function Chat({
         setMessages={setMessages}
         reload={reload}
         votes={votes}
-        isReadonly={false}
+        isReadonly={isReadonly}
       />
     </>
   );

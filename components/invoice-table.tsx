@@ -16,64 +16,31 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ChevronRight } from 'lucide-react';
+import useSWR from 'swr';
 
 // Define the LineItem type
 type LineItem = {
+  id: string;
+  invoiceId: string;
   itemName: string;
   itemQuantity: number;
   itemPrice: number;
+  createdAt: Date;
 };
 
 // Define the Invoice type
 type Invoice = {
+  id: string;
+  userId: string;
   customerName: string;
   vendorName: string;
   invoiceNumber: string;
-  invoiceDate: string;
-  dueDate: string;
+  invoiceDate: Date;
+  dueDate: Date;
   amount: number;
+  createdAt: Date;
   lineItems: LineItem[];
 };
-
-// Dummy data
-const dummyData: Invoice[] = [
-  {
-    customerName: 'Acme Corp',
-    vendorName: 'Tech Solutions Inc',
-    invoiceNumber: 'INV-001',
-    invoiceDate: '2024-03-01',
-    dueDate: '2024-04-01',
-    amount: 1500.00,
-    lineItems: [
-      { itemName: 'Consulting Services', itemQuantity: 40, itemPrice: 25.00 },
-      { itemName: 'Software License', itemQuantity: 1, itemPrice: 500.00 },
-    ],
-  },
-  {
-    customerName: 'Global Industries',
-    vendorName: 'Office Supplies Co',
-    invoiceNumber: 'INV-002',
-    invoiceDate: '2024-03-05',
-    dueDate: '2024-04-05',
-    amount: 750.50,
-    lineItems: [
-      { itemName: 'Office Supplies', itemQuantity: 100, itemPrice: 5.50 },
-      { itemName: 'Paper Products', itemQuantity: 50, itemPrice: 4.00 },
-    ],
-  },
-  {
-    customerName: 'StartupX',
-    vendorName: 'Cloud Services Ltd',
-    invoiceNumber: 'INV-003',
-    invoiceDate: '2024-03-10',
-    dueDate: '2024-04-10',
-    amount: 2500.00,
-    lineItems: [
-      { itemName: 'Cloud Storage', itemQuantity: 1, itemPrice: 1000.00 },
-      { itemName: 'API Services', itemQuantity: 1, itemPrice: 1500.00 },
-    ],
-  },
-];
 
 const columnHelper = createColumnHelper<Invoice>();
 
@@ -92,11 +59,11 @@ const columns = [
   }),
   columnHelper.accessor('invoiceDate', {
     header: 'Invoice Date',
-    cell: (info) => info.getValue(),
+    cell: (info) => new Date(info.getValue()).toLocaleDateString(),
   }),
   columnHelper.accessor('dueDate', {
     header: 'Due Date',
-    cell: (info) => info.getValue(),
+    cell: (info) => new Date(info.getValue()).toLocaleDateString(),
   }),
   columnHelper.accessor('amount', {
     header: 'Amount',
@@ -116,12 +83,18 @@ const columns = [
   }),
 ];
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export function InvoiceTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const { data: invoices, error } = useSWR<Invoice[]>(
+    `/api/invoices`,
+    fetcher
+  );
 
   const table = useReactTable({
-    data: dummyData,
+    data: invoices || [],
     columns,
     state: {
       sorting,
@@ -130,6 +103,22 @@ export function InvoiceTable() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  if (error) {
+    return <div className="text-center py-4">Failed to load invoices</div>;
+  }
+
+  if (!invoices) {
+    return <div className="text-center py-4">Loading...</div>;
+  }
+
+  if (invoices.length === 0) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        Your invoices will appear here when they are processed
+      </div>
+    );
+  }
 
   return (
     <>
@@ -211,8 +200,8 @@ export function InvoiceTable() {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedInvoice.lineItems.map((item, index) => (
-                      <tr key={index} className="border-t">
+                    {selectedInvoice.lineItems.map((item) => (
+                      <tr key={item.id} className="border-t">
                         <td className="px-4 py-2">{item.itemName}</td>
                         <td className="px-4 py-2 text-right">{item.itemQuantity}</td>
                         <td className="px-4 py-2 text-right">${item.itemPrice.toFixed(2)}</td>

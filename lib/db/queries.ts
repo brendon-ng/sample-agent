@@ -1,4 +1,3 @@
-import 'server-only';
 import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
@@ -11,6 +10,10 @@ import {
   type Message,
   message,
   vote,
+  invoice,
+  lineItem,
+  type Invoice,
+  type LineItem,
 } from './schema';
 import type { BlockKind } from '@/components/block';
 
@@ -317,6 +320,79 @@ export async function updateChatVisiblityById({
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
     console.error('Failed to update chat visibility in database');
+    throw error;
+  }
+}
+
+export async function getInvoicesByUserId(userId: string) {
+  try {
+    return await db
+      .select()
+      .from(invoice)
+      .where(eq(invoice.userId, userId))
+      .orderBy(desc(invoice.createdAt));
+  } catch (error) {
+    console.error('Failed to get invoices from database', error);
+    throw error;
+  }
+}
+
+export async function getLineItemsByInvoiceId(invoiceId: string) {
+  try {
+    return await db
+      .select()
+      .from(lineItem)
+      .where(eq(lineItem.invoiceId, invoiceId))
+      .orderBy(asc(lineItem.createdAt));
+  } catch (error) {
+    console.error('Failed to get line items from database', error);
+    throw error;
+  }
+}
+
+export async function createInvoice(data: {
+  id: string;
+  userId: string;
+  customerName: string;
+  vendorName: string;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  dueDate: Date;
+  amount: number;
+  lineItems: Array<{
+    id: string;
+    itemName: string;
+    itemQuantity: number;
+    itemPrice: number;
+  }>;
+}) {
+  try {
+    await db.insert(invoice).values({
+      id: data.id,
+      userId: data.userId,
+      customerName: data.customerName,
+      vendorName: data.vendorName,
+      invoiceNumber: data.invoiceNumber,
+      invoiceDate: data.invoiceDate,
+      dueDate: data.dueDate,
+      amount: data.amount,
+      createdAt: new Date(),
+    });
+
+    await db.insert(lineItem).values(
+      data.lineItems.map((item) => ({
+        id: item.id,
+        invoiceId: data.id,
+        itemName: item.itemName,
+        itemQuantity: item.itemQuantity,
+        itemPrice: item.itemPrice,
+        createdAt: new Date(),
+      })),
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to create invoice in database', error);
     throw error;
   }
 }
