@@ -1,6 +1,6 @@
 'use client';
 
-import type { ChatRequestOptions, Message } from 'ai';
+import type { ChatRequestOptions, Message, ToolInvocation } from 'ai';
 import cx from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState } from 'react';
@@ -24,15 +24,7 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 
-const PurePreviewMessage = ({
-  chatId,
-  message,
-  vote,
-  isLoading,
-  setMessages,
-  reload,
-  isReadonly,
-}: {
+interface PreviewMessageProps {
   chatId: string;
   message: Message;
   vote: Vote | undefined;
@@ -44,80 +36,36 @@ const PurePreviewMessage = ({
     chatRequestOptions?: ChatRequestOptions,
   ) => Promise<string | null | undefined>;
   isReadonly: boolean;
-}) => {
+}
+
+const PurePreviewMessage = ({
+  message,
+  chatId,
+  isLoading,
+  isReadonly,
+  setMessages,
+  reload,
+  vote,
+}: PreviewMessageProps) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
   return (
     <AnimatePresence>
       <motion.div
-        className="w-full mx-auto max-w-3xl px-4 group/message"
-        initial={{ y: 5, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        data-role={message.role}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        className="flex flex-col gap-4"
       >
-        <div
-          className={cn(
-            'flex gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
-            {
-              'w-full': mode === 'edit',
-              'group-data-[role=user]/message:w-fit': mode !== 'edit',
-            },
-          )}
-        >
-          {message.role === 'assistant' && (
-            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
-              <div className="translate-y-px">
-                <SparklesIcon size={14} />
-              </div>
-            </div>
-          )}
+        <div className="flex flex-row gap-4">
+          <div className="size-8" />
 
-          <div className="flex flex-col gap-4 w-full">
-            {message.experimental_attachments && (
-              <div className="flex flex-row justify-end gap-2">
-                {message.experimental_attachments.map((attachment) => (
-                  <PreviewAttachment
-                    key={attachment.url}
-                    attachment={attachment}
-                  />
-                ))}
-              </div>
-            )}
-
-            {message.reasoning && (
-              <MessageReasoning
-                isLoading={isLoading}
-                reasoning={message.reasoning}
-              />
-            )}
-
-            {(message.content || message.reasoning) && mode === 'view' && (
+          <div className="flex-1">
+            {message.content && mode === 'view' && (
               <div className="flex flex-row gap-2 items-start">
-                {message.role === 'user' && !isReadonly && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="px-2 h-fit rounded-full text-muted-foreground opacity-0 group-hover/message:opacity-100"
-                        onClick={() => {
-                          setMode('edit');
-                        }}
-                      >
-                        <PencilEditIcon />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit message</TooltipContent>
-                  </Tooltip>
-                )}
+                <div className="size-8" />
 
-                <div
-                  className={cn('flex flex-col gap-4', {
-                    'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
-                      message.role === 'user',
-                  })}
-                >
-                  <Markdown>{message.content as string}</Markdown>
-                </div>
+                <Markdown>{message.content}</Markdown>
               </div>
             )}
 
@@ -137,7 +85,7 @@ const PurePreviewMessage = ({
 
             {message.toolInvocations && message.toolInvocations.length > 0 && (
               <div className="flex flex-col gap-4">
-                {message.toolInvocations.map((toolInvocation) => {
+                {message.toolInvocations.map((toolInvocation: ToolInvocation) => {
                   const { toolName, toolCallId, state, args } = toolInvocation;
 
                   if (state === 'result') {
@@ -145,25 +93,83 @@ const PurePreviewMessage = ({
 
                     return (
                       <div key={toolCallId}>
-                        {toolName === 'getWeather' ? (
-                          <Weather weatherAtLocation={result} />
-                        ) : toolName === 'createDocument' ? (
-                          <DocumentPreview
-                            isReadonly={isReadonly}
-                            result={result}
-                          />
-                        ) : toolName === 'updateDocument' ? (
-                          <DocumentToolResult
-                            type="update"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
-                        ) : toolName === 'requestSuggestions' ? (
-                          <DocumentToolResult
-                            type="request-suggestions"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
+                        {toolName === 'queryInvoices' ? (
+                          <div className="bg-muted p-4 rounded-lg">
+                            <p className="font-medium mb-2">{result.message}</p>
+                            {result.data && (
+                              <div className="mt-2">
+                                {result.data.totalAmount && (
+                                  <p>Total Amount: ${result.data.totalAmount.toFixed(2)}</p>
+                                )}
+                                {result.data.customers && (
+                                  <div>
+                                    <p className="font-medium">Customers:</p>
+                                    <ul className="list-disc list-inside">
+                                      {result.data.customers.map((customer: string) => (
+                                        <li key={customer}>{customer}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {result.data.vendors && (
+                                  <div>
+                                    <p className="font-medium">Vendors:</p>
+                                    <ul className="list-disc list-inside">
+                                      {result.data.vendors.map((vendor: string) => (
+                                        <li key={vendor}>{vendor}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {result.data.lineItems && (
+                                  <div>
+                                    <p className="font-medium">Line Items:</p>
+                                    <ul className="list-disc list-inside">
+                                      {result.data.lineItems.map((item: any) => (
+                                        <li key={item.id}>
+                                          {item.itemName} - {item.itemQuantity} x ${item.itemPrice.toFixed(2)}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {result.data.overdueInvoices && (
+                                  <div>
+                                    <p className="font-medium">Overdue Invoices:</p>
+                                    <ul className="list-disc list-inside">
+                                      {result.data.overdueInvoices.map((invoice: any) => (
+                                        <li key={invoice.id}>
+                                          Invoice #{invoice.invoiceNumber} - Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {result.data.invoiceNumbers && (
+                                  <div>
+                                    <p className="font-medium">Invoice Numbers:</p>
+                                    <ul className="list-disc list-inside">
+                                      {result.data.invoiceNumbers.map((number: string) => (
+                                        <li key={number}>{number}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {result.data.invoices && (
+                                  <div>
+                                    <p className="font-medium">All Invoices:</p>
+                                    <ul className="list-disc list-inside">
+                                      {result.data.invoices.map((invoice: any) => (
+                                        <li key={invoice.id}>
+                                          Invoice #{invoice.invoiceNumber} - {invoice.customerName} - ${invoice.amount.toFixed(2)}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <pre>{JSON.stringify(result, null, 2)}</pre>
                         )}
@@ -174,25 +180,13 @@ const PurePreviewMessage = ({
                     <div
                       key={toolCallId}
                       className={cx({
-                        skeleton: ['getWeather'].includes(toolName),
+                        skeleton: ['queryInvoices'].includes(toolName),
                       })}
                     >
-                      {toolName === 'getWeather' ? (
-                        <Weather />
-                      ) : toolName === 'createDocument' ? (
-                        <DocumentPreview isReadonly={isReadonly} args={args} />
-                      ) : toolName === 'updateDocument' ? (
-                        <DocumentToolCall
-                          type="update"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : toolName === 'requestSuggestions' ? (
-                        <DocumentToolCall
-                          type="request-suggestions"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
+                      {toolName === 'queryInvoices' ? (
+                        <div className="bg-muted p-4 rounded-lg">
+                          <p>Querying invoices...</p>
+                        </div>
                       ) : null}
                     </div>
                   );

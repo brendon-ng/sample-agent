@@ -2,7 +2,7 @@ import { createInvoice } from './queries';
 import { nanoid } from 'nanoid';
 
 const DEMO_USER_ID = 'demo-user';
-const LOGGED_IN_USER_ID = 'user-123';
+const LOGGED_IN_USER_ID = 'user_0';
 
 async function seed() {
   // Create some invoices for the demo user
