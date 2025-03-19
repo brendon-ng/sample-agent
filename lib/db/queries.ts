@@ -396,3 +396,62 @@ export async function createInvoice(data: {
     throw error;
   }
 }
+
+export async function deleteInvoice(invoiceId: string) {
+  try {
+    // First delete all line items associated with the invoice
+    await db.delete(lineItem).where(eq(lineItem.invoiceId, invoiceId));
+    
+    // Then delete the invoice
+    await db.delete(invoice).where(eq(invoice.id, invoiceId));
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete invoice from database', error);
+    throw error;
+  }
+}
+
+export async function updateInvoice(
+  id: string,
+  updates: Partial<Omit<Invoice, 'id' | 'userId' | 'createdAt'>>
+) {
+  try {
+    await db
+      .update(invoice)
+      .set(updates)
+      .where(eq(invoice.id, id));
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update invoice in database', error);
+    throw error;
+  }
+}
+
+export async function deleteLineItem(lineItemId: string) {
+  try {
+    await db.delete(lineItem).where(eq(lineItem.id, lineItemId));
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete line item from database', error);
+    throw error;
+  }
+}
+
+export async function updateLineItem(
+  id: string,
+  updates: Partial<Omit<LineItem, 'id' | 'invoiceId' | 'createdAt'>>
+) {
+  try {
+    await db
+      .update(lineItem)
+      .set(updates)
+      .where(eq(lineItem.id, id));
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update line item in database', error);
+    throw error;
+  }
+}
